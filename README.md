@@ -1,3 +1,6 @@
+![Preview](image.png)
+
+
 Langvoro is a project designed to ultimately provide a free of charge (and free of accounts) alternative to popular online language courses and applications.
 It uses the Google Translate API to translate a basic vocabulary (in English by default as it is handled better by GT), as well as its TTS technology to provide voices. I also scrapes for image from Google or Flickr, so it's not necessary to provide an image for each new word or sentence added.
 The courses will be structured in cards, where the user will have access to audiovisual content, and will need to write down the sentences in order to improve reading, writing and listening skills at the same time. A better way to define it, the goal is to become an "Anki on steroids".
@@ -20,6 +23,10 @@ It's still very WIP, and as of the last commit, all of it was done in a single d
 - flickrapi
 - urllib.request
 
+#### Languages supported
+
+All of them, as long as it works on Google Translate =P
+
 
 #### Roadmap
 
@@ -32,3 +39,5 @@ It's still very WIP, and as of the last commit, all of it was done in a single d
 - Add every single basic words between languages to the database
 - Add an option to download the entire course for offline usage
 - Port it to Android, or even make a web interface
+- Provide phonetic references (IPA)
+- Actually respect good design guidelines and make it entirely Object-oriented 

@@ -92,14 +92,14 @@ def card(meaning,phrase,image,windowname,lan):
                 [sg.Text(phrase)],
                 [sg.Text(translit)],
                 [sg.Image(image)],
-                [sg.Text('Repeat phrase'), sg.InputText()],
+                [sg.Text('Repeat sentence'), sg.InputText()],
                 [sg.Button('Ok'),sg.Button('Repeat'), sg.Button('Cancel')] ]
     else:
         layout = [  
                 [sg.Text(meaning)],
                 [sg.Text(phrase)],
                 [sg.Image(image)],
-                [sg.Text('Repeat phrase'), sg.InputText()],
+                [sg.Text('Repeat sentence'), sg.InputText()],
                 [sg.Button('Ok'),sg.Button('Repeat'), sg.Button('Cancel')] ]
     global window
     window = sg.Window(windowname, layout)
@@ -132,7 +132,7 @@ def verifycard(meaning,phrase,image,windowname,lan):
     layout = [  
             [sg.Text(meaning)],
             [sg.Image(image)],
-            [sg.Text('Repeat phrase'), sg.InputText()],
+            [sg.Text('Repeat sentence'), sg.InputText()],
             [sg.Button('Ok'),sg.Button('Repeat'), sg.Button('Cancel')] ]
     global window
     window = sg.Window(windowname, layout)
