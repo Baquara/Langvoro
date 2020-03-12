@@ -30,7 +30,7 @@ All of them, as long as it works on Google Translate =P
 
 #### Roadmap
 
-- Actually provide a structure for the courses (how each section/step/phase will work in terms of learning and comprehension). For example, there could be a section where the user would be provided machine generated random sentences/situations where he/she would need to use the language skills he acquired in order to give a proper reply, and the machine would then decide it as accurate or not.
+- Actually provide a structure for the courses (how each section/step/phase will work in terms of learning and comprehension). For example, there could be a section where the user would be provided machine generated random sentences/situations where he/she would need to use the acquired language skills in order to give a proper reply, and the machine would then decide it as accurate or not.
 - Provide support for Speech to Text (using a suitable API) where the user would have to speak the sentences on top of listening and writing it
 - Add some minor machine learning functions where it's needed or fit
 - Add gamification (scores, give benefits to those who makes less mistakes)
