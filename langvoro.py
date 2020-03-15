@@ -13,6 +13,8 @@ from hangul_romanize import Transliter
 from hangul_romanize.rule import academic
 import flickrapi
 import urllib.request
+import speech_recognition as sr
+import pyaudio
 
 
 #sg.theme('DarkAmber')   # Add a touch of color
@@ -21,36 +23,160 @@ my_dict = {'ab': 'Abkhazian', 'aa': 'Afar', 'af': 'Afrikaans', 'ak': 'Akan', 'sq
 
 my_inverted_dict = dict(map(reversed, my_dict.items()))
 
+google_sp_dict ={
+
+'af' : 'af-ZA',
+'am' : 'am-ET',
+'by' :'by-AM',
+'az': 'az-AZ',
+'id':'id-ID',
+'ms':'ms-MY',
+'bn':'bn-BD',
+'ca':'ca-ES',
+'cs':'cs-CZ',
+'da':'da-DK',
+'de':'de-DE',
+'en':'en-US',
+'es':'es-ES',
+'eu' : 'eu-ES',
+'fil':'fil-PH', 
+'fr': 'fr-FR',
+'gl':'gl-ES', 
+'ka':'ka-GE',
+'gu':'gu-IN', 
+'hr':'hr-HR', 
+'zu':'zu-ZA', 
+'is':'is-IS', 
+'it':'it-IT', 
+'jv':'jv-ID',
+'kn':'kn-IN ',
+'km':'km-KH',
+'b':'b-LA', 
+'Iv':'Iv-LV', 
+'It':'It-LT', 
+'hu':'hu-HU',
+'ml':'ml-IN',
+'mr':'mr-IN',
+'nl':'nl-NL',
+'ne':'ne-NP',
+'nb':'nb-NO',
+'pl':'pl-PL',
+'pt':'pt-BR' ,
+'ro':'ro-RO', 
+'si':'si-LK' ,
+'sk':'sk-SK' ,
+'sl':'sl-SI' ,
+'su':'su-ID' ,
+'sw':'sw-TZ' ,
+'fi':'fi-FI' ,
+'sv':'sv-SE' ,
+'ta':'ta-IN' ,
+'te':'te-IN' ,
+'vi':'vi-VN' ,
+'tr':'tr-TR' ,
+'ur':'ur-IN' ,
+'el':'el-GR' ,
+'bg':'bg-BG' ,
+'ru':'ru-RU' ,
+'sr':'sr-RS' ,
+'uk':'uk-UA' ,
+'he':'he-IL' ,
+'ar':'ar-EG' ,
+'fa':'fa-IR' ,
+'hi':'hi-IN' ,
+'th':'th-TH' ,
+'ko':'ko-KR' ,
+'zh':'zh-TW' ,
+'yue':'yue-Hant-HK',
+'ja':'ja-JP' ,
+'zh':'zh'
+}
+
+
+
+terminate=False
+
+
+
+def showtranslated(otext,lang):
+    translator = Translator()
+    needs_translit = False
+    translit = ''
+    translations = translator.translate(otext, dest=lang)
+    if (lang!='ru' or lang!='ja' or lang!='ko'):
+         layout = [  
+            [sg.InputText(translations.text)],
+            [sg.Button('Cancel')] ]
+    else:
+        translit = transliter(translations.text,lang)
+        layout = [  
+            [sg.InputText(translations.text)],
+            [sg.InputText(translit)],
+            [sg.Button('Cancel')] ]
+        needs_translit=True
+        elemento= simplify(otext)
+    global window
+    window = sg.Window('Results', layout)
+    while True:
+        event, values = window.Read()
+        if event in (None, 'Cancel'):
+            window.close()
+            break
+
+def showspeechresults(text):
+    layout = [  
+            [sg.InputText(text)],
+            [sg.Button('Ok')]]
+    global window
+    window = sg.Window('Speech results', layout)
+    while True:
+        event, values = window.Read()
+        if event in (None, 'Ok'):   # if user presses ok
+            window.close()
+            break
+
+
+
+
 
 def custominput(selected):
 
     layout = [  
             [sg.Text('Enter input'), sg.InputText()],
-            [sg.Button('Ok'),sg.Button('Repeat'), sg.Button('Cancel')] ]
+            [sg.Button('Ok'),sg.Button('Repeat'), sg.Button('Cancel')],
+            [sg.Button('Speech to text'),sg.Text('Say something right after clicking')]]
     translator = Translator()
     lang=my_inverted_dict[selected]
+    glang=google_sp_dict[lang]
+    print("O idioma para stt é "+glang)
     print(lang)
-    needs_translit = False
-    translit = ''
     global window
     window = sg.Window('Custom translation', layout)
     while True:
         event, values = window.Read()
+        if event in (None, 'Cancel'):
+            window.close()
+            break
         if event in (None, 'Repeat'):   # if user presses repeat
             translations = translator.translate(values[0], dest=lang)
             tts = gTTS(translations.text, lang=lang)
             tts.save('audio.mp3')
             playsound('audio.mp3')
         if event in (None, 'Ok'):   # if user presses ok
-            print("entrou")
-            print(values[0])
-            translations = translator.translate(values[0], dest=lang)
-            print(translations.text)
-            if (lang=='ru' or lang=='ja' or lang=='ko'):
-                translit = transliter(translations.text,lang)
-                print(translit)
-                needs_translit=True 
-            elemento= simplify(values[0])
+            showtranslated(values[0],lang)
+        if event in (None, 'Speech to text'):
+            with sr.Microphone( sample_rate=48000) as source:
+                r=sr.Recognizer()
+                r.adjust_for_ambient_noise(source)
+                print("Say Something!")
+                audio=r.listen(source)
+                try:
+                    text = r.recognize_google(audio,language=glang)
+                    showspeechresults(text) 
+                except sr.UnknownValueError:
+                    print("Google Speech Recognition could not understand audio")
+                except sr.RequestError as e:
+                    print("Could not request results from Google Speech Recognition service; {0}").format(e)
 
 
 
@@ -82,6 +208,7 @@ def simplify(istring):
 def card(meaning,phrase,image,windowname,lan):
     needs_translit = False
     translit = ''
+    glang=google_sp_dict[lan]
     if (lan=='ru' or lan=='ja' or lan=='ko'):
         translit = transliter(phrase,lan)
         print(translit)
@@ -93,14 +220,16 @@ def card(meaning,phrase,image,windowname,lan):
                 [sg.Text(translit)],
                 [sg.Image(image)],
                 [sg.Text('Repeat sentence'), sg.InputText()],
-                [sg.Button('Ok'),sg.Button('Repeat'), sg.Button('Cancel')] ]
+                [sg.Button('Ok'),sg.Button('Repeat'), sg.Button('Skip'), sg.Button('Cancel')],
+                [sg.Button('Speech to text'),sg.Text('Say something right after clicking')] ]
     else:
         layout = [  
                 [sg.Text(meaning)],
                 [sg.Text(phrase)],
                 [sg.Image(image)],
                 [sg.Text('Repeat sentence'), sg.InputText()],
-                [sg.Button('Ok'),sg.Button('Repeat'), sg.Button('Cancel')] ]
+                [sg.Button('Ok'),sg.Button('Repeat'), sg.Button('Skip'), sg.Button('Cancel')],
+                [sg.Button('Speech to text'),sg.Text('Say something right after clicking')]]
     global window
     window = sg.Window(windowname, layout)
     tts = gTTS(phrase, lang=lan)
@@ -108,7 +237,11 @@ def card(meaning,phrase,image,windowname,lan):
     playsound('audio.mp3')
     while True:
         event, values = window.Read()
+        if event in (None, 'Skip'):   # if user presses cancel
+            break
         if event in (None, 'Cancel'):   # if user presses cancel
+            global terminate
+            terminate=True
             break
         if event in (None, 'Repeat'):   # if user presses repeat
             playsound('audio.mp3')
@@ -119,6 +252,19 @@ def card(meaning,phrase,image,windowname,lan):
             window.close()
             verifycard(meaning,phrase,image,windowname,lan)
             break
+        if event in (None, 'Speech to text'):
+            with sr.Microphone( sample_rate=48000) as source:
+                r=sr.Recognizer()
+                r.adjust_for_ambient_noise(source)
+                print("Say Something!")
+                audio=r.listen(source)
+                try:
+                    text = r.recognize_google(audio,language=glang)
+                    showspeechresults(text) 
+                except sr.UnknownValueError:
+                    print("Google Speech Recognition could not understand audio")
+                except sr.RequestError as e:
+                    print("Could not request results from Google Speech Recognition service; {0}").format(e)
     window.close()
 
 
@@ -133,13 +279,13 @@ def verifycard(meaning,phrase,image,windowname,lan):
             [sg.Text(meaning)],
             [sg.Image(image)],
             [sg.Text('Repeat sentence'), sg.InputText()],
-            [sg.Button('Ok'),sg.Button('Repeat'), sg.Button('Cancel')] ]
+            [sg.Button('Ok'),sg.Button('Repeat'), sg.Button('Skip')] ]
     global window
     window = sg.Window(windowname, layout)
     playsound('audio.mp3')
     while True:
         event, values = window.Read()
-        if event in (None, 'Cancel'):   # if user presses cancel
+        if event in (None, 'Skip'):   # if user presses cancel
             break
         if event in (None, 'Repeat'):   # if user presses repeat
             playsound('audio.mp3')
@@ -175,6 +321,11 @@ def lvl(selected,lvl):
     if selevel ==3:
         translations = translator.translate(['Hi! My name is Adam', 'Nice to meet you!', 'How old are you?', 'Where is the bathroom?', 'I need to go now. Bye bye!'], dest=lang)
     for translation in translations:
+        global terminate
+        if terminate==True :
+            terminate=False
+            break
+
 #Procurar imagens
         iteration=iteration+1
         """orig_stdout = sys.stdout
@@ -263,32 +414,37 @@ def Course(selected):
     window = sg.Window(selected + ' course', layout)
     while True:
         event, values = window.read()
-        if event in (None, 'Cancel'):   # if user closes window or clicks cancel
+        if event in (None, 'Cancel'): 
             window.close()
             break
-        if event in (None, 'Custom input'):   # if user closes window or clicks cancel
+        if event in (None, 'Ok'):  
+            print(values)
+            window.close()
+            lvl(selected,values[0])
+            Course(selected)
+        if event in (None, 'Custom input'):
             custominput(selected)
-        print(values)
-        window.close()
-        lvl(selected,values[0])
-        Course(selected)
 
 
+def main():
+    # All the stuff inside your window.
+    layout = [  
+                [sg.Text('Welcome to Langvoro! Select the language you want to learn:')],
+                [sg.Combo(['Abkhaz','Afar','Afrikaans','Akan ','Albanian ','Amharic ','Arabic ','Aragonese ','Armenian ','Assamese ','Avaric','Avestan','Aymara','Azerbaijani','Bambara','Bashkir','Basque','Belarusian','Bengali','Bangla ','Bihari','Bislama','Bosnian ','Breton ','Bulgarian ','Burmese ','Catalan','Valencian','Chamorro ','Chechen','Chichewa','Chewa','Nyanja','Chinese (Simplified)','Chinese (Traditional)' ,'Chuvash','Cornish','Corsican','Cree','Croatian','Czech','Danish','Divehi','Dhivehi','Maldivian','Dutch','Dzongkha','English','Esperanto','Estonian','Ewe','Faroese','Fijian','Finnish','French','Fula','Fulah','Pulaar','Pular','Galician','Ganda','Georgian','German','Greek','Guaraní','Gujarati','Haitian','Haitian Creole','Hausa','Hebrew','Herero','Hindi','Hiri Motu','Hungarian','Icelandic','Ido','Igbo','Indonesian','Interlingua','Interlingue','Inuktitut','Inupiaq','Irish','Italian','Japanese','Javanese','Kalaallisut','Greenlandic','Kannada','Kanuri','Kashmiri','Kazakh','Khmer','Kikuyu','Gikuyu','Kinyarwanda','Kirundi','Komi ','Kongo','Korean','Kurdish','Kwanyama','Kuanyama','Kyrgyz','Lao','Latin','Latvian','Limburgish','Limburgan','Limburger','Lingala','Lithuanian','Luba-Katanga','Luxembourgish','Letzeburgesch','Macedonian','Malagasy','Malay','Malayalam','Maltese','Manx','Marathi','Marshallese','Mongolian','Maori','Nauru','Navajo','Navaho','Ndonga','Nepali','Northern Ndebele','Northern Sami','Norwegian','Norwegian Bokmål','Norwegian Nynorsk','Nuosu','Occitan','Ojibwe','Ojibwa','Old Church Slavonic','Church Slavonic','Old Bulgarian','Oriya','Oromo','Ossetian','Ossetic','Panjabi','Punjabi','Pashto','Pushto','Persian','Polish','Portuguese','Pali','Quechua','Romanian','Romansh','Russian','Samoan','Sango','Sanskrit','Sardinian','Scottish Gaelic','Gaelic','Serbian','Shona','Sindhi','Sinhala','Sinhalese','Slovak','Slovene','Somali','Southern Ndebele','Southern Sotho','Spanish','Castilian','Sundanese','Swahili','Swati','Swedish','Tagalog','Tahitian','Tajik','Tamil','Tatar','Telugu','Thai','Tibetan Standard','Tibetan','Central','Tigrinya','Tonga','Tsonga','Tswana','Turkish','Turkmen','Twi tw','Ukrainian','Urdu','Uyghur','Uighur','Uzbek','Venda','Vietnamese','Volapük','Walloon','Welsh','Western Frisian','Wolof','Xhosa','Yiddish','Yoruba','Zhuang','Chuang','Zulu'])],
+                #[sg.Text('Enter something on Row 2'), sg.InputText()],
+                [sg.Button('Ok'), sg.Button('Cancel')] ]
 
-# All the stuff inside your window.
-layout = [  
-            [sg.Text('Welcome to Langvoro! Select the language you want to learn:')],
-            [sg.Combo(['Abkhaz','Afar','Afrikaans','Akan ','Albanian ','Amharic ','Arabic ','Aragonese ','Armenian ','Assamese ','Avaric','Avestan','Aymara','Azerbaijani','Bambara','Bashkir','Basque','Belarusian','Bengali','Bangla ','Bihari','Bislama','Bosnian ','Breton ','Bulgarian ','Burmese ','Catalan','Valencian','Chamorro ','Chechen','Chichewa','Chewa','Nyanja','Chinese (Simplified)','Chinese (Traditional)' ,'Chuvash','Cornish','Corsican','Cree','Croatian','Czech','Danish','Divehi','Dhivehi','Maldivian','Dutch','Dzongkha','English','Esperanto','Estonian','Ewe','Faroese','Fijian','Finnish','French','Fula','Fulah','Pulaar','Pular','Galician','Ganda','Georgian','German','Greek','Guaraní','Gujarati','Haitian','Haitian Creole','Hausa','Hebrew','Herero','Hindi','Hiri Motu','Hungarian','Icelandic','Ido','Igbo','Indonesian','Interlingua','Interlingue','Inuktitut','Inupiaq','Irish','Italian','Japanese','Javanese','Kalaallisut','Greenlandic','Kannada','Kanuri','Kashmiri','Kazakh','Khmer','Kikuyu','Gikuyu','Kinyarwanda','Kirundi','Komi ','Kongo','Korean','Kurdish','Kwanyama','Kuanyama','Kyrgyz','Lao','Latin','Latvian','Limburgish','Limburgan','Limburger','Lingala','Lithuanian','Luba-Katanga','Luxembourgish','Letzeburgesch','Macedonian','Malagasy','Malay','Malayalam','Maltese','Manx','Marathi','Marshallese','Mongolian','Maori','Nauru','Navajo','Navaho','Ndonga','Nepali','Northern Ndebele','Northern Sami','Norwegian','Norwegian Bokmål','Norwegian Nynorsk','Nuosu','Occitan','Ojibwe','Ojibwa','Old Church Slavonic','Church Slavonic','Old Bulgarian','Oriya','Oromo','Ossetian','Ossetic','Panjabi','Punjabi','Pashto','Pushto','Persian','Polish','Portuguese','Pali','Quechua','Romanian','Romansh','Russian','Samoan','Sango','Sanskrit','Sardinian','Scottish Gaelic','Gaelic','Serbian','Shona','Sindhi','Sinhala','Sinhalese','Slovak','Slovene','Somali','Southern Ndebele','Southern Sotho','Spanish','Castilian','Sundanese','Swahili','Swati','Swedish','Tagalog','Tahitian','Tajik','Tamil','Tatar','Telugu','Thai','Tibetan Standard','Tibetan','Central','Tigrinya','Tonga','Tsonga','Tswana','Turkish','Turkmen','Twi tw','Ukrainian','Urdu','Uyghur','Uighur','Uzbek','Venda','Vietnamese','Volapük','Walloon','Welsh','Western Frisian','Wolof','Xhosa','Yiddish','Yoruba','Zhuang','Chuang','Zulu'])],
-            #[sg.Text('Enter something on Row 2'), sg.InputText()],
-            [sg.Button('Ok'), sg.Button('Cancel')] ]
+    # Create the Window
+    window = sg.Window('Langvoro', layout)
+    # Event Loop to process "events" and get the "values" of the inputs
+    while True:
+        event, values = window.read()
+        if event in (None, 'Cancel'): 
+            window.close()
+            break
+        if event in (None, 'Ok'):  
+            Course(values[0])
 
-# Create the Window
-window = sg.Window('Langvoro', layout)
-# Event Loop to process "events" and get the "values" of the inputs
-while True:
-    event, values = window.read()
-    if event in (None, 'Cancel'):   # if user closes window or clicks cancel
-        break
-    Course(values[0])
 
-window.close()
+if __name__ == '__main__':
+    main()
